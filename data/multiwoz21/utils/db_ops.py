@@ -9,10 +9,9 @@ class MultiWozDB(object):
             with open(db_paths[domain], 'r') as f:
                 self.dbs[domain] = json.loads(f.read().lower())
 
-
-    def oneHotVector(self, domain, num):
-        """Return number of available entities for particular domain."""
-        vector = [0,0,0,0]
+    def one_hot_vector(self, domain, num):
+        """Return number of available entities for a particular domain."""
+        vector = [0, 0, 0, 0]
         if num == '':
             return vector
         if domain != 'train':
@@ -20,7 +19,7 @@ class MultiWozDB(object):
                 vector = [1, 0, 0, 0]
             elif num == 1:
                 vector = [0, 1, 0, 0]
-            elif num <=3:
+            elif num <= 3:
                 vector = [0, 0, 1, 0]
             else:
                 vector = [0, 0, 0, 1]
@@ -29,17 +28,14 @@ class MultiWozDB(object):
                 vector = [1, 0, 0, 0]
             elif num <= 5:
                 vector = [0, 1, 0, 0]
-            elif num <=10:
+            elif num <= 10:
                 vector = [0, 0, 1, 0]
             else:
                 vector = [0, 0, 0, 1]
         return vector
 
-
-    def addBookingPointer(self, turn_da):
-        """Add information about availability of the booking option."""
-        # Booking pointer
-        # Do not consider booking two things in a single turn.
+    def add_booking_pointer(self, turn_da):
+        """Add information about the availability of the booking option."""
         vector = [0, 0]
         if turn_da.get('booking-nobook'):
             vector = [1, 0]
@@ -47,28 +43,22 @@ class MultiWozDB(object):
             vector = [0, 1]
         return vector
 
-
-    def addDBPointer(self, domain, match_num, return_num=False):
+    def add_db_pointer(self, domain, match_num, return_num=False):
         """Create database pointer for all related domains."""
-        # if turn_domains is None:
-        #     turn_domains = db_domains
         if domain in db_domains:
-            vector = self.oneHotVector(domain, match_num)
+            vector = self.one_hot_vector(domain, match_num)
         else:
-            vector = [0, 0, 0 ,0]
+            vector = [0, 0, 0, 0]
         return vector
 
-    def addDBIndicator(self, domain, match_num, return_num=False):
+    def add_db_indicator(self, domain, match_num, return_num=False):
         """Create database indicator for all related domains."""
-        # if turn_domains is None:
-        #     turn_domains = db_domains
         if domain in db_domains:
-            vector = self.oneHotVector(domain, match_num)
+            vector = self.one_hot_vector(domain, match_num)
         else:
-            vector = [0, 0, 0 ,0]
-        
-        # '[db_nores]', '[db_0]', '[db_1]', '[db_2]', '[db_3]'
-        if vector == [0,0,0,0]:
+            vector = [0, 0, 0, 0]
+
+        if vector == [0, 0, 0, 0]:
             indicator = '[db_nores]'
         else:
             indicator = '[db_%s]' % vector.index(1)
@@ -78,23 +68,19 @@ class MultiWozDB(object):
         """Create database pointer for all related domains."""
         match = {'general': ''}
         entry = {}
-        # if turn_domains is None:
-        #     turn_domains = db_domains
         for domain in all_domains:
             match[domain] = ''
             if domain in db_domains and constraints.get(domain):
-                matched_ents = self.queryJsons(domain, constraints[domain])
+                matched_ents = self.query_jsons(domain, constraints[domain])
                 match[domain] = len(matched_ents)
-                if return_entry :
+                if return_entry:
                     entry[domain] = matched_ents
         if return_entry:
             return entry
         return match
 
-
-    def pointerBack(self, vector, domain):
-        # multi domain implementation
-        # domnum = cfg.domain_num
+    def pointer_back(self, vector, domain):
+        """Multi-domain implementation for pointers."""
         if domain.endswith(']'):
             domain = domain[1:-1]
         if domain != 'train':
@@ -111,11 +97,11 @@ class MultiWozDB(object):
                 2: '6-10',
                 3: '>10'
             }
-        if vector[:4] == [0,0,0,0]:
+        if vector[:4] == [0, 0, 0, 0]:
             report = ''
         else:
             num = vector.index(1)
-            report = domain+': '+nummap[num] + '; '
+            report = domain + ': ' + nummap[num] + '; '
 
         if vector[-2] == 0 and vector[-1] == 1:
             report += 'booking: ok'
@@ -124,17 +110,12 @@ class MultiWozDB(object):
 
         return report
 
-
-    def queryJsons(self, domain, constraints, exactly_match=True, return_name=False):
-        """Returns the list of entities for a given domain
-        based on the annotation of the belief state
-        constraints: dict e.g. {'pricerange': 'cheap', 'area': 'west'}
-        """
-        # query the db
+    def query_jsons(self, domain, constraints, exactly_match=True, return_name=False):
+        """Returns a list of entities for a given domain based on belief state annotations."""
         if domain == 'taxi':
             return [{'taxi_colors': random.choice(self.dbs[domain]['taxi_colors']),
-            'taxi_types': random.choice(self.dbs[domain]['taxi_types']),
-            'taxi_phone': [random.randint(1, 9) for _ in range(10)]}]
+                     'taxi_types': random.choice(self.dbs[domain]['taxi_types']),
+                     'taxi_phone': [random.randint(1, 9) for _ in range(10)]}]
         if domain == 'police':
             return self.dbs['police']
         if domain == 'hospital':
@@ -154,7 +135,6 @@ class MultiWozDB(object):
 
         match_result = []
 
-
         if 'name' in constraints:
             for db_ent in self.dbs[domain]:
                 if 'name' in db_ent:
@@ -170,34 +150,31 @@ class MultiWozDB(object):
             for s, v in constraints.items():
                 if s == 'name':
                     continue
-                if s in ['people', 'stay'] or(domain == 'hotel' and s == 'day') or \
-                (domain == 'restaurant' and s in ['day', 'time']):
+                if s in ['people', 'stay'] or (domain == 'hotel' and s == 'day') or \
+                        (domain == 'restaurant' and s in ['day', 'time']):
                     continue
 
-                skip_case = {"don't care":1, "do n't care":1, "dont care":1, "not mentioned":1, "dontcare":1, "":1}
+                skip_case = {"don't care": 1, "do n't care": 1, "dont care": 1, "not mentioned": 1, "dontcare": 1, "": 1}
                 if skip_case.get(v):
                     continue
 
                 if s not in db_ent:
-                    # logging.warning('Searching warning: slot %s not in %s db'%(s, domain))
                     match = False
                     break
 
-                # v = 'guesthouse' if v == 'guest house' else v
-                # v = 'swimmingpool' if v == 'swimming pool' else v
                 v = 'yes' if v == 'free' else v
 
                 if s in ['arrive', 'leave']:
                     try:
-                        h,m = v.split(':')   # raise error if time value is not xx:xx format
-                        v = int(h)*60+int(m)
+                        h, m = v.split(':')
+                        v = int(h) * 60 + int(m)
                     except:
                         match = False
                         break
-                    time = int(db_ent[s].split(':')[0])*60+int(db_ent[s].split(':')[1])
-                    if s == 'arrive' and v>time:
+                    time = int(db_ent[s].split(':')[0]) * 60 + int(db_ent[s].split(':')[1])
+                    if s == 'arrive' and v > time:
                         match = False
-                    if s == 'leave' and v<time:
+                    if s == 'leave' and v < time:
                         match = False
                 else:
                     if exactly_match and v != db_ent[s]:
@@ -219,8 +196,7 @@ class MultiWozDB(object):
                 match_result = [e['name'] for e in match_result]
             return match_result
 
-
-    def querySQL(self, domain, constraints):
+    def query_sql(self, domain, constraints):
         if not self.sql_dbs:
             for dom in db_domains:
                 db = 'db/{}-dbase.db'.format(dom)
@@ -229,17 +205,14 @@ class MultiWozDB(object):
                 self.sql_dbs[dom] = c
 
         sql_query = "select * from {}".format(domain)
-
-
         flag = True
         for key, val in constraints.items():
-            if val == "" or val == "dontcare" or val == 'not mentioned' or val == "don't care" or val == "dont care" or val == "do n't care":
+            if val == "" or val in ["dontcare", 'not mentioned', "don't care", "dont care", "do n't care"]:
                 pass
             else:
                 if flag:
                     sql_query += " where "
                     val2 = val.replace("'", "''")
-                    # val2 = normalize(val2)
                     if key == 'leaveAt':
                         sql_query += r" " + key + " > " + r"'" + val2 + r"'"
                     elif key == 'arriveBy':
@@ -249,7 +222,6 @@ class MultiWozDB(object):
                     flag = False
                 else:
                     val2 = val.replace("'", "''")
-                    # val2 = normalize(val2)
                     if key == 'leaveAt':
                         sql_query += r" and " + key + " > " + r"'" + val2 + r"'"
                     elif key == 'arriveBy':
@@ -257,49 +229,21 @@ class MultiWozDB(object):
                     else:
                         sql_query += r" and " + key + "=" + r"'" + val2 + r"'"
 
-        try:  # "select * from attraction  where name = 'queens college'"
+        try:
             print(sql_query)
             return self.sql_dbs[domain].execute(sql_query).fetchall()
         except:
-            return []  # TODO test it
-
+            return []
 
 if __name__ == '__main__':
-    dbPATHs = {
-            'attraction': 'db/attraction_db_processed.json',
-            'hospital': 'db/hospital_db_processed.json',
-            'hotel': 'db/hotel_db_processed.json',
-            'police': 'db/police_db_processed.json',
-            'restaurant': 'db/restaurant_db_processed.json',
-            'taxi': 'db/taxi_db_processed.json',
-            'train': 'db/train_db_processed.json',
-        }
-    db = MultiWozDB(dbPATHs)
-    while True:
-        constraints = {}
-        inp = input('input belief state in fomat: domain-slot1=value1;slot2=value2...\n')
-        domain, cons = inp.split('-')
-        for sv in cons.split(';'):
-            s, v = sv.split('=')
-            constraints[s] = v
-        # res = db.querySQL(domain, constraints)
-        res = db.queryJsons(domain, constraints, return_name=True)
-        report = []
-        reidx = {
-            'hotel': 8,
-            'restaurant': 6,
-            'attraction':5,
-            'train': 1,
-        }
-        # for ent in res:
-        #     if reidx.get(domain):
-        #         report.append(ent[reidx[domain]])
-        # for ent in res:
-        #     if 'name' in ent:
-        #         report.append(ent['name'])
-        #     if 'trainid' in ent:
-        #         report.append(ent['trainid'])
-        print(constraints)
-        print(res)
-        print('count:', len(res), '\nnames:', report)
-
+    db_paths = {
+        'attraction': 'db/attraction_db_processed.json',
+        'hospital': 'db/hospital_db_processed.json',
+        'hotel': 'db/hotel_db_processed.json',
+        'police': 'db/police_db_processed.json',
+        'restaurant': 'db/restaurant_db_processed.json',
+        'taxi': 'db/taxi_db_processed.json',
+        'train': 'db/train_db_processed.json',
+    }
+    multiwoz_db = MultiWozDB(db_paths)
+    print(multiwoz_db.query_jsons('hotel', {'area': 'west'}))
