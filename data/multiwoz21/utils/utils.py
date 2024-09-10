@@ -4,7 +4,6 @@ import numpy as np
 from collections import OrderedDict
 from utils import ontology
 
-
 def py2np(list):
     return np.array(list)
 
@@ -25,11 +24,12 @@ class Vocab(object):
     def __init__(self, vocab_size=0):
         self.vocab_size = vocab_size
         self.vocab_size_oov = 0   # get after construction
-        self._idx2word = {}   #word + oov
+        self._idx2word = {}   # word + oov
         self._word2idx = {}   # word
-        self._freq_dict = {}   #word + oov
+        self._freq_dict = {}   # word + oov
+        # Initialize with special tokens
         for w in ['<pad>', '<go_r>', '<unk>', '<go_b>', '<go_a>','<eos_u>', '<eos_r>',
-                      '<eos_b>', '<eos_a>', '<go_d>','<eos_d>']:
+                  '<eos_b>', '<eos_a>', '<go_d>','<eos_d>']:
             self._absolute_add_word(w)
 
     def _absolute_add_word(self, w):
@@ -55,10 +55,9 @@ class Vocab(object):
         l = sorted(self._freq_dict.keys(), key=lambda x: -self._freq_dict[x])
         print('Vocabulary size including oov: %d' % (len(l) + len(self._idx2word)))
         if len(l) + len(self._idx2word) < self.vocab_size:
-            logging.warning('actual label set smaller than that configured: {}/{}'
-                            .format(len(l) + len(self._idx2word), self.vocab_size))
-        for word in ontology.all_domains + ['general']:
-            word = '[' + word + ']'
+            logging.warning('Actual label set smaller than that configured: {}/{}'.format(len(l) + len(self._idx2word), self.vocab_size))
+        # Add domain-specific vocabulary
+        for word in ['[hospital]']:  # Only add the hospital domain
             self._add_to_vocab(word)
         for word in ontology.all_acts:
             word = '[' + word + ']'
@@ -79,7 +78,7 @@ class Vocab(object):
         for w, idx in self._word2idx.items():
             self._idx2word[idx] = w
         self.vocab_size_oov = len(self._idx2word)
-        print('vocab file loaded from "'+vocab_path+'"')
+        print('Vocabulary file loaded from "'+vocab_path+'"')
         print('Vocabulary size including oov: %d' % (self.vocab_size_oov))
 
     def save_vocab(self, vocab_path):
@@ -87,11 +86,10 @@ class Vocab(object):
         write_dict(vocab_path+'.word2idx.json', self._word2idx)
         write_dict(vocab_path+'.freq.json', _freq_dict)
 
-
     def encode(self, word, include_oov=True):
         if include_oov:
             if self._word2idx.get(word, None) is None:
-                raise ValueError('Unknown word: %s. Vocabulary should include oovs here.'%word)
+                raise ValueError('Unknown word: %s. Vocabulary should include oovs here.' % word)
             return self._word2idx[word]
         else:
             word = '<unk>' if word not in self._word2idx else word
@@ -106,14 +104,13 @@ class Vocab(object):
     def sentence_oov_map(self, index_list):
         return [self.oov_idx_map(_) for _ in index_list]
 
-
     def decode(self, idx, indicate_oov=False):
         if not self._idx2word.get(idx):
-            raise ValueError('Error idx: %d. Vocabulary should include oovs here.'%idx)
-        if not indicate_oov or idx<self.vocab_size:
+            raise ValueError('Error idx: %d. Vocabulary should include oovs here.' % idx)
+        if not indicate_oov or idx < self.vocab_size:
             return self._idx2word[idx]
         else:
-            return self._idx2word[idx]+'(o)'
+            return self._idx2word[idx] + '(o)'
 
     def sentence_decode(self, index_list, eos=None, indicate_oov=False):
         l = [self.decode(_, indicate_oov) for _ in index_list]
@@ -132,41 +129,31 @@ def padSeqs_gpt(sequences, pad_id, maxlen=None):
         lengths.append(len(x))
 
     num_samples = len(sequences)
-    seq_mexlen = np.max(lengths)
+    seq_maxlen = np.max(lengths)
 
-    # maxlen = 1024
-    if seq_mexlen > 1024: # gpt2.n_ctx
-        # print('maxlen exceeds 1024')
+    if seq_maxlen > 1024: # gpt2.n_ctx
         maxlen = 1024
     else:
-        maxlen = seq_mexlen
+        maxlen = seq_maxlen
 
-    # tokenizer.encode('<|endoftext|>') = ['50256']
-    # All labels set to ``-100`` are ignored (masked), the loss is only
-    # computed for labels in ``[0, ..., config.vocab_size]`` (from modeling_gpt2.GPT2LMHeadModel)
-    
     x = (np.ones((num_samples, maxlen)) * pad_id)
     for idx, s in enumerate(sequences):
         if not len(s):
-            print('empty list was found in padSeqs')
-        # trunc method = 'pre'
+            print('Empty list was found in padSeqs')
         trunc = s[-maxlen:]
         trunc = np.asarray(trunc)
-
-        # pad method = 'post'
         x[idx, :len(trunc)] = trunc
-            
+
     return x, lengths
 
-def padSeqs(sequences, maxlen=None, truncated = False, pad_method='post',
-                     trunc_method='pre', dtype='int32', value=0.):
+def padSeqs(sequences, maxlen=None, truncated=False, pad_method='post',
+             trunc_method='pre', dtype='int32', value=0.):
     if not hasattr(sequences, '__len__'): 
         raise ValueError('`sequences` must be iterable.')
     lengths = []
     for x in sequences:
         if not hasattr(x, '__len__'):
-            raise ValueError('`sequences` must be a list of iterables. '
-                             'Found non-iterable: ' + str(x))
+            raise ValueError('`sequences` must be a list of iterables. Found non-iterable: ' + str(x))
         lengths.append(len(x))
 
     num_samples = len(sequences)
@@ -176,8 +163,7 @@ def padSeqs(sequences, maxlen=None, truncated = False, pad_method='post',
         maxlen = min(seq_maxlen, maxlen)
     else:
         maxlen = seq_maxlen
-    # take the sample shape from the first non empty sequence
-    # checking for consistency in the main loop below.
+
     sample_shape = tuple()
     for s in sequences:
         if len(s) > 0:
@@ -187,8 +173,8 @@ def padSeqs(sequences, maxlen=None, truncated = False, pad_method='post',
     x = (np.ones((num_samples, maxlen) + sample_shape) * value).astype(dtype)
     for idx, s in enumerate(sequences):
         if not len(s):
-            print('empty list/array was found')
-            continue  # empty list/array was found
+            print('Empty list/array was found')
+            continue
         if trunc_method == 'pre':
             trunc = s[-maxlen:]
         elif trunc_method == 'post':
@@ -196,7 +182,6 @@ def padSeqs(sequences, maxlen=None, truncated = False, pad_method='post',
         else:
             raise ValueError('Truncating type "%s" not understood' % trunc_method)
 
-        # check `trunc` has expected shape
         trunc = np.asarray(trunc, dtype=dtype)
         if trunc.shape[1:] != sample_shape:
             raise ValueError('Shape of sample %s of sequence at position %s is different from expected shape %s' %
@@ -210,15 +195,7 @@ def padSeqs(sequences, maxlen=None, truncated = False, pad_method='post',
             raise ValueError('Padding type "%s" not understood' % pad_method)
     return x
 
-
 def get_glove_matrix(glove_path, vocab, initial_embedding_np):
-    """
-    return a glove embedding matrix
-    :param self:
-    :param glove_file:
-    :param initial_embedding_np:
-    :return: np array of [V,E]
-    """
     ef = open(glove_path, 'r', encoding='UTF-8')
     cnt = 0
     vec_array = initial_embedding_np
@@ -234,7 +211,7 @@ def get_glove_matrix(glove_path, vocab, initial_embedding_np):
         if not vocab.has_word(word):
             continue
         word_idx = vocab.encode(word)
-        if word_idx <vocab.vocab_size:
+        if word_idx < vocab.vocab_size:
             cnt += 1
             vec_array[word_idx] = vec
             new_avg += np.average(vec)
@@ -242,11 +219,11 @@ def get_glove_matrix(glove_path, vocab, initial_embedding_np):
     new_avg /= cnt
     new_std /= cnt
     ef.close()
-    logging.info('%d known embedding. old mean: %f new mean %f, old std %f new std %f' % (cnt, old_avg,
+    logging.info('%d known embedding. Old mean: %f New mean: %f, Old std: %f New std: %f' % (cnt, old_avg,
                                                                                           new_avg, old_std, new_std))
     return vec_array
 
-def position_encoding_init(self, n_position, d_pos_vec):
+def position_encoding_init(n_position, d_pos_vec):
     position_enc = np.array([[pos / np.power(10000, 2 * (j // 2) / d_pos_vec) for j in range(d_pos_vec)]
                              if pos != 0 else np.zeros(d_pos_vec) for pos in range(n_position)])
 
