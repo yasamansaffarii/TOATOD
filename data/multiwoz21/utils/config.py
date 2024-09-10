@@ -1,61 +1,40 @@
-import logging, time, os
+import logging
+import time
+import os
 
 class Config:
     def __init__(self, data_prefix):
-        # data_prefix = r'../data/'
+        # Initialize with the data directory prefix
         self.data_prefix = data_prefix
-        self._multiwoz_damd_init()
+        self._multiwoz_hospital_init()
 
-    def _multiwoz_damd_init(self):
+    def _multiwoz_hospital_init(self):
+        # Define the paths for vocabulary, data, and lists
         self.vocab_path_train = self.data_prefix + '/multi-woz-processed/vocab'
         self.data_path = self.data_prefix + '/multi-woz-processed/'
         self.data_file = 'data_for_damd.json'
         self.dev_list = self.data_prefix + '/valListFile.txt'
         self.test_list = self.data_prefix + '/testListFile.txt'
 
+        # Focus only on the hospital domain database
         self.dbs = {
-            'attraction': self.data_prefix + '/db/attraction_db_processed.json',
-            'hospital': self.data_prefix + '/db/hospital_db_processed.json',
-            'hotel': self.data_prefix + '/db/hotel_db_processed.json',
-            'police': self.data_prefix + '/db/police_db_processed.json',
-            'restaurant': self.data_prefix + '/db/restaurant_db_processed.json',
-            'taxi': self.data_prefix + '/db/taxi_db_processed.json',
-            'train': self.data_prefix + '/db/train_db_processed.json',
+            'hospital': self.data_prefix + '/db/hospital_db_processed.json'
         }
+
+        # Specify the domain file path
         self.domain_file_path = self.data_prefix + '/multi-woz-processed/domain_files.json'
 
-        '''
-        self.vocab_path_train = '../data/multi-woz-processed/vocab'
-        self.data_path = '../data/multi-woz-processed/'
-        self.data_file = 'data_for_damd.json'
-        self.dev_list = '../data/multi-woz/valListFile.json'
-        self.test_list = '../data/multi-woz/testListFile.json'
+        # Set experiment domains to hospital only
+        self.exp_domains = ['hospital']
 
+        # Configuration options for dialog state tracking
+        self.enable_aspn = True  # Enable action span
+        self.use_pvaspn = False  # Do not use policy vector action span
+        self.enable_bspn = True  # Enable belief state span
+        self.bspn_mode = 'bspn'  # Set mode to 'bspn' or 'bsdx'
+        self.enable_dspn = False # Disable dialog state prediction network
+        self.enable_dst = False  # Disable dialog state tracking
 
-
-        self.dbs = {
-            'attraction': '../data/db/attraction_db_processed.json',
-            'hospital': '../data/db/hospital_db_processed.json',
-            'hotel': '../data/db/hotel_db_processed.json',
-            'police': '../data/db/police_db_processed.json',
-            'restaurant': '../data/db/restaurant_db_processed.json',
-            'taxi': '../data/db/taxi_db_processed.json',
-            'train': '../data/db/train_db_processed.json',
-        }
-        self.domain_file_path = '../data/multi-woz-processed/domain_files.json'
-        self.slot_value_set_path = '../data/db/value_set_processed.json'
-        '''
-
-        self.exp_domains = ['all'] # hotel,train, attraction, restaurant, taxi
-
-        self.enable_aspn = True
-        self.use_pvaspn = False
-        self.enable_bspn = True
-        self.bspn_mode = 'bspn' # 'bspn' or 'bsdx'
-        self.enable_dspn = False # removed
-        self.enable_dst = False
-
-        self.exp_domains = ['all'] # hotel,train, attraction, restaurant, taxi
+        # Limit maximum context length and vocabulary size
         self.max_context_length = 900
         self.vocab_size = 3000
-
