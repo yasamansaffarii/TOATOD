@@ -16,9 +16,9 @@ def split_bs_text_by_domain(bs_text, bsdx_text):
     token_list = bsdx_text.split()
     domain_list = []
     for token in token_list:
-        if token.startswith('[') and token.endswith(']'):
+        if token.startswith('[hospital]'):  # Filter for "hospital" domain
             domain_list.append(token)
-    if domain_list == 1:  # only have one domain
+    if len(domain_list) == 1:  # only have one domain
         return [bs_text], [bsdx_text]
     else:
         bs_list, bsdx_list = [], []
@@ -37,38 +37,37 @@ def split_bs_text_by_domain(bs_text, bsdx_text):
 
 
 def parse_bs_bsdx(bs_text, bsdx_text):
-    # this function deals belief state from single domain
-    # we assume there is no repitive slots in the bsdx text
     dx_token_list = bsdx_text.split()
-
     bs_name_list = bsdx_text.split()
     token_num = len(bs_name_list)
     map_dict = {}
     res_bs_text = ''
     res_bsdx_text = ''
+    
+    # Only process slots related to "hospital"
     for idx in range(token_num):
         curr_slot = bs_name_list[idx]
-        if curr_slot.startswith('[') and curr_slot.endswith(']'):
-            continue
-        else:
+        if curr_slot.startswith('[hospital]') and curr_slot.endswith(']'):
             if idx == token_num - 1:
-                # curr_value = bs_text.split(' ' + curr_slot + ' ')[-1].strip()
                 curr_value = bs_text.split(' ' + curr_slot + ' ')[-1].strip()
             else:
                 next_slot = bs_name_list[idx + 1]
                 curr_value = bs_text.split(' ' + curr_slot + ' ')[1].split(' ' + next_slot)[0].strip()
             map_dict[curr_slot] = curr_value
+    
+    # Reform the text based on "hospital" domain
     for curr_slot in bs_name_list:
-        if curr_slot.startswith('[') and curr_slot.endswith(']'):
+        if curr_slot.startswith('[hospital]') and curr_slot.endswith(']'):
             res_bs_text += curr_slot + ' '
             res_bsdx_text += curr_slot + ' '
-        else:
+        elif curr_slot in map_dict:
             res_bs_text += curr_slot + ' is ' + map_dict[curr_slot] + ' , '
             res_bsdx_text += curr_slot + ' , '
 
     res_bs_text = res_bs_text.strip().strip(',').strip()
     res_bsdx_text = res_bsdx_text.strip().strip(',').strip()
     return ' '.join(res_bs_text.split()).strip(), ' '.join(res_bsdx_text.split()).strip()
+
 
 
 def overall_parsing_bs_bsdx(bs_text, bsdx_text):
@@ -150,13 +149,15 @@ def transform_id_dict(in_dict, tokenizer, special_token_list):
 def process_dict(in_dict, tokenizer, special_token_list):
     in_dict = transform_id_dict(in_dict, tokenizer, special_token_list)
     res_dict = in_dict.copy()
-    bs_text_reform, bsdx_text_reform = overall_parsing_bs_bsdx(in_dict['bspn'], in_dict['bsdx'])
-    res_dict['bspn_reform'] = ' '.join(bs_text_reform.split()).strip()
-    res_dict['bsdx_reform'] = ' '.join(bsdx_text_reform.split()).strip()
-    action_text_reform = parse_action_text(in_dict['aspn'])
-    res_dict['aspn_reform'] = ' '.join(action_text_reform.split()).strip()
-    return res_dict
 
+    # Process only "hospital" domain text
+    if '[hospital]' in in_dict['bspn']:
+        bs_text_reform, bsdx_text_reform = overall_parsing_bs_bsdx(in_dict['bspn'], in_dict['bsdx'])
+        res_dict['bspn_reform'] = ' '.join(bs_text_reform.split()).strip()
+        res_dict['bsdx_reform'] = ' '.join(bsdx_text_reform.split()).strip()
+        action_text_reform = parse_action_text(in_dict['aspn'])
+        res_dict['aspn_reform'] = ' '.join(action_text_reform.split()).strip()
+    return res_dict
 
 import progressbar
 
@@ -178,7 +179,18 @@ def process_data_list(data_list, tokenizer, special_token_list):
     print(len(res_list), len(data_list))
     return res_list
 
+"""Filtering Function (filter_hospital_domain):
 
+    A new function, filter_hospital_domain, is added to filter the data entries.
+    It checks for the presence of the "[hospital]" tag in the bspn 
+    (belief state pointer notation) of each data entry, which indicates that 
+    the entry is relevant to the "hospital" domain.
+Processing Functions Adjusted:
+
+    In the blocks where the training, development, and test data are processed,
+    the function filter_hospital_domain is called
+    after process_data_list to filter out entries that are not related
+    to the "hospital" domain."""
 if __name__ == '__main__':
     import json
     import os
@@ -216,23 +228,29 @@ if __name__ == '__main__':
     reader = MultiWozReader(tokenizer, cfg, data_mode='train')
     print('Raw data loaded.')
 
+    # Process only "hospital" domain data for training, dev, and test
+    def filter_hospital_domain(data_list):
+        """ Filter data to keep only the entries related to the 'hospital' domain. """
+        return [item for item in data_list if '[hospital]' in item['bspn']]
+
     print('Start processing training data...')
-    train_list = process_data_list(reader.train, tokenizer, special_token_list)
+    train_list = filter_hospital_domain(process_data_list(reader.train, tokenizer, special_token_list))
     out_f = r'multi-woz-fine-processed/multiwoz21-fine-processed-train.json'
     with open(out_f, 'w') as outfile:
         json.dump(train_list, outfile, indent=4)
     print('Training data saved!')
 
     print('Start processing dev data...')
-    dev_list = process_data_list(reader.dev, tokenizer, special_token_list)
+    dev_list = filter_hospital_domain(process_data_list(reader.dev, tokenizer, special_token_list))
     out_f = r'multi-woz-fine-processed/multiwoz21-fine-processed-dev.json'
     with open(out_f, 'w') as outfile:
         json.dump(dev_list, outfile, indent=4)
     print('Dev data saved!')
 
     print('Start processing test data...')
-    test_list = process_data_list(reader.test, tokenizer, special_token_list)
+    test_list = filter_hospital_domain(process_data_list(reader.test, tokenizer, special_token_list))
     out_f = r'multi-woz-fine-processed/multiwoz21-fine-processed-test.json'
     with open(out_f, 'w') as outfile:
         json.dump(test_list, outfile, indent=4)
     print('Test data saved!')
+
