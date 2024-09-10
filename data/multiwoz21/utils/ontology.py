@@ -1,165 +1,78 @@
-all_domains = ['restaurant', 'hotel', 'attraction', 'train', 'taxi', 'police', 'hospital']
-db_domains = ['restaurant', 'hotel', 'attraction', 'train']
+# Hospital domain only
+all_domains = ['hospital']
+db_domains = ['hospital']
 
-# original slot names in goals (including booking slots)
-# requestable_slots_in_goals = {
-#     "taxi": ["car type", "phone"],
-#     "police": ["postcode", "address", "phone"],
-#     "hospital": ["address", "phone", "postcode"],
-#     "hotel": ["address", "postcode", "internet", "phone", "parking", "type", "pricerange", "stars", "area", "reference"],
-#     "attraction": ["entrance fee", "type", "address", "postcode", "phone", "area", "reference"],
-#     "train": ["duration", "leaveat", "price", "arriveby", "id", "reference"],
-#     "restaurant": ["phone", "postcode", "address", "pricerange", "food", "area", "reference"]
-# }
+# Original slot names in goals (including booking slots)
+requestable_slots_in_goals = {
+    "hospital": ["address", "phone", "postcode"]
+}
 
-# informable_slots_in_goals = {
-#     "taxi": ["leaveat", "destination", "departure", "arriveby"],
-#     "police": [],
-#     "hospital": ["department"],
-#     "hotel": ["type", "parking", "pricerange", "internet", "stay", "day", "people", "area", "stars", "name"],
-#     "attraction": ["area", "type", "name"],
-#     "train": ["destination", "day", "arriveby", "departure", "people", "leaveat"],
-#     "restaurant": ["food", "pricerange", "area", "name", "time", "day", "people"]
-# }
+informable_slots_in_goals = {
+    "hospital": ["department"]
+}
 
 normlize_slot_names = {
-    "car type": "car",
-    "entrance fee": "price",
-    "duration": "time",
-    "leaveat": 'leave',
-    'arriveby': 'arrive',
-    'trainid': 'id'
+    # No changes needed for hospital slots
 }
 
+# Requestable and Informable Slots for the Hospital Domain
 requestable_slots = {
-    "taxi": ["car", "phone"],
-    "police": ["postcode", "address", "phone"],
-    "hospital": ["address", "phone", "postcode"],
-    "hotel": ["address", "postcode", "internet", "phone", "parking", "type", "pricerange", "stars", "area", "reference"],
-    "attraction": ["price", "type", "address", "postcode", "phone", "area", "reference"],
-    "train": ["time", "leave", "price", "arrive", "id", "reference"],
-    "restaurant": ["phone", "postcode", "address", "pricerange", "food", "area", "reference"]
+    "hospital": ["address", "phone", "postcode"]
 }
-all_reqslot = ["car", "address", "postcode", "phone", "internet",  "parking", "type", "pricerange", "food",
-                      "stars", "area", "reference", "time", "leave", "price", "arrive", "id"]
-# count: 17
+all_reqslot = ["address", "phone", "postcode"]  # Hospital related request slots
 
 informable_slots = {
-    "taxi": ["leave", "destination", "departure", "arrive"],
-    "police": [],
-    "hospital": ["department"],
-    "hotel": ["type", "parking", "pricerange", "internet", "stay", "day", "people", "area", "stars", "name"],
-    "attraction": ["area", "type", "name"],
-    "train": ["destination", "day", "arrive", "departure", "people", "leave"],
-    "restaurant": ["food", "pricerange", "area", "name", "time", "day", "people"]
+    "hospital": ["department"]
 }
-all_infslot = ["type", "parking", "pricerange", "internet", "stay", "day", "people", "area", "stars", "name",
-                     "leave", "destination", "departure", "arrive", "department", "food", "time"]
-# count: 17
+all_infslot = ["department"]  # Hospital related informable slots
 
-all_slots = all_reqslot + ["stay", "day", "people", "name", "destination", "departure", "department"]
-get_slot = {}
-for s in all_slots:
-    get_slot[s] = 1
-# count: 24
+# All Slots Related to Hospital
+all_slots = all_reqslot + ["department"]  # All hospital slots
+get_slot = {s: 1 for s in all_slots}  # Initialize get_slot dictionary
+# Total slots count: 4
 
-
-# mapping slots in dialogue act to original goal slot names
+# Mapping slots in dialogue act to original goal slot names
 da_abbr_to_slot_name = {
-    'addr': "address",
-    'fee': "price",
-    'post': "postcode",
-    'ref': 'reference',
-    'ticket': 'price',
-    'depart': "departure",
-    'dest': "destination",
+    # Hospital domain does not need specific mappings
 }
 
-# slot merging: not used currently
-# slot_name_to_value_token = {
-#     'entrance fee': 'price',
-#     'pricerange': 'price',
-#     'arrive': 'time',
-#     'leave': 'time',
-#     'departure': 'name',
-#     'destination': 'name',
-#     'stay': 'count',
-#     'people': 'count',
-#     'stars': 'count',
-# }
-# dialog_act_dom = ['restaurant', 'hotel', 'attraction', 'train', 'taxi', 'police', 'hospital', 'general', 'booking']
+# Dialog Acts for the Hospital Domain
 dialog_acts = {
-    'restaurant': ['inform', 'request', 'nooffer', 'recommend', 'select', 'offerbook', 'offerbooked', 'nobook'],
-    'hotel': ['inform', 'request', 'nooffer', 'recommend', 'select', 'offerbook', 'offerbooked', 'nobook'],
-    'attraction': ['inform', 'request', 'nooffer', 'recommend', 'select'],
-    'train': ['inform', 'request', 'nooffer', 'offerbook', 'offerbooked', 'select'],
-    'taxi': ['inform', 'request'],
-    'police': ['inform', 'request'],
     'hospital': ['inform', 'request'],
-    # 'booking': ['book', 'inform', 'nobook', 'request'],
-    'general': ['bye', 'greet', 'reqmore', 'welcome'],
+    'general': ['bye', 'greet', 'reqmore', 'welcome']
 }
+
+# All acts for hospital domain
 all_acts = []
 for acts in dialog_acts.values():
     for act in acts:
         if act not in all_acts:
             all_acts.append(act)
-# print(all_acts)
 
+# Dialogue Act Parameters for the Hospital Domain
 dialog_act_params = {
-    'inform': all_slots + ['choice', 'open'] ,
-    'request': all_infslot+['choice', 'price'],
-    'nooffer': all_slots + ['choice'],
-    'recommend': all_reqslot + ['choice', 'open'],
-    'select': all_slots +['choice'],
-    # 'book': ['time', 'people', 'stay', 'reference', 'day', 'name', 'choice'],
-    'nobook': ['time', 'people', 'stay', 'reference', 'day', 'name', 'choice'],
-    'offerbook':all_slots + ['choice'],
-    'offerbooked': all_slots + ['choice'],
+    'inform': all_slots + ['choice'],
+    'request': all_infslot + ['choice'],
     'reqmore': [],
     'welcome': [],
     'bye': [],
-    'greet': [],
+    'greet': []
 }
 
-# dialog_acts = ['inform', 'request', 'nooffer', 'recommend', 'select', 'book', 'nobook', 'offerbook', 'offerbooked',
-#                         'reqmore', 'welcome', 'bye', 'greet'] # thank
-dialog_act_all_slots = all_slots + ['choice', 'open']
-# act_span_vocab = ['['+i+']' for i in dialog_act_dom] + ['['+i+']' for i in dialog_acts] + all_slots
-
-# value_token_in_resp = ['address', 'name', 'phone', 'postcode', 'area', 'food', 'pricerange', 'id',
-#                                      'department', 'place', 'day', 'count', 'car']
-# count: 12
-
-
-# special slot tokens in belief span
-# no need of this, just covert slot to [slot] e.g. pricerange -> [pricerange]
+# Slots and Act Tokens in Dialogues for Hospital
+dialog_act_all_slots = all_slots + ['choice']
 slot_name_to_slot_token = {}
 
-
-# special slot tokens in responses
-# not use at the momoent
-slot_name_to_value_token = {
-    # 'entrance fee': '[value_price]',
-    # 'pricerange': '[value_price]',
-    # 'arriveby': '[value_time]',
-    # 'leaveat': '[value_time]',
-    # 'departure': '[value_place]',
-    # 'destination': '[value_place]',
-    # 'stay': 'count',
-    # 'people': 'count'
-}
-
-
+# Special tokens related to database operations and responses
 db_tokens = ['<sos_db>', '<eos_db>', '[db_nores]', '[db_0]', '[db_1]', '[db_2]', '[db_3]']
 
 special_tokens = ['<pad>', '<go_r>', '<unk>', '<go_b>', '<go_a>',
-                            '<eos_u>', '<eos_r>', '<eos_b>', '<eos_a>', '<go_d>','<eos_d>',
-                            '<sos_u>', '<sos_r>', '<sos_b>', '<sos_a>', '<sos_d>'] + db_tokens
+                  '<eos_u>', '<eos_r>', '<eos_b>', '<eos_a>', '<go_d>', '<eos_d>',
+                  '<sos_u>', '<sos_r>', '<sos_b>', '<sos_a>', '<sos_d>'] + db_tokens
 
 sos_eos_tokens = ['<_PAD_>', '<go_r>', '<go_b>', '<go_a>', '<eos_u>', '<eos_r>', '<eos_b>', 
-                '<eos_a>', '<go_d>','<eos_d>', '<sos_u>', '<sos_r>', '<sos_b>', '<sos_a>', '<sos_d>', 
-                '<sos_db>', '<eos_db>', '<sos_context>', '<eos_context>']
+                  '<eos_a>', '<go_d>', '<eos_d>', '<sos_u>', '<sos_r>', '<sos_b>', '<sos_a>', '<sos_d>', 
+                  '<sos_db>', '<eos_db>', '<sos_context>', '<eos_context>']
 
 eos_tokens = {
     'user': '<eos_u>', 'user_delex': '<eos_u>',
@@ -167,7 +80,8 @@ eos_tokens = {
     'bspn': '<eos_b>', 'bspn_gen': '<eos_b>', 'pv_bspn': '<eos_b>',
     'bsdx': '<eos_b>', 'bsdx_gen': '<eos_b>', 'pv_bsdx': '<eos_b>',
     'aspn': '<eos_a>', 'aspn_gen': '<eos_a>', 'pv_aspn': '<eos_a>',
-    'dspn': '<eos_d>', 'dspn_gen': '<eos_d>', 'pv_dspn': '<eos_d>'}
+    'dspn': '<eos_d>', 'dspn_gen': '<eos_d>', 'pv_dspn': '<eos_d>'
+}
 
 sos_tokens = {
     'user': '<sos_u>', 'user_delex': '<sos_u>',
@@ -175,6 +89,5 @@ sos_tokens = {
     'bspn': '<sos_b>', 'bspn_gen': '<sos_b>', 'pv_bspn': '<sos_b>',
     'bsdx': '<sos_b>', 'bsdx_gen': '<sos_b>', 'pv_bsdx': '<sos_b>',
     'aspn': '<sos_a>', 'aspn_gen': '<sos_a>', 'pv_aspn': '<sos_a>',
-    'dspn': '<sos_d>', 'dspn_gen': '<sos_d>', 'pv_dspn': '<sos_d>'}
-
-    
+    'dspn': '<sos_d>', 'dspn_gen': '<sos_d>', 'pv_dspn': '<sos_d>'
+}
